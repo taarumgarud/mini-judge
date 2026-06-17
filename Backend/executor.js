@@ -14,7 +14,7 @@ const executeCpp = async (code, input) => {
         await fs.writeFile(codeFilePath, code);
         await fs.writeFile(inputFilePath, input);
 
-        const command = `docker run --rm -v "${tempDir}":/app -w /app gcc sh -c "g++ main.cpp -o main && ./main < input.txt"`;
+        const command = `docker run --rm --memory="256m" --cpus="0.5" --network none -v "${tempDir}":/app -w /app gcc sh -c "g++ main.cpp -o main && ./main < input.txt"`;
 
         return await new Promise((resolve) => {
             exec(command, { timeout: 5000 }, (error, stdout, stderr) => {
