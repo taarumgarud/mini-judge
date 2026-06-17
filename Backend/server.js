@@ -33,25 +33,42 @@ app.post('/submit', async (req, res) => {
         const problem = await Problem.findById(problemId);
         if(!problem) return res.status(404).json({ error: 'Problem not found' });
 
-        let overallStatus = 'Pass';
+        let totalTime = 0;
 
         for(const testCase of problem.testCases) {
             const result = await executeCpp(code, testCase.input);
+            totalTime += result.executionTime || 0;
 
-            if(result.status !== 'Pass') {
-                overallStatus = result.status;
-                break;
+            if(result.status === 'Compile Error') {
+                return res.json({
+                    status: 'Compile Error',
+                    errorTrace: result.output,
+                    executionTime: result.executionTime
+                });
             }
-            if (result.output !== testCase.expectedOutput) {
-                overallStatus = 'Wrong Answer';
-                break;
+
+            if (result.status !== 'Pass') {
+                return res.json({
+                    status: result.status,
+                    executionTime: result.executionTime
+                });
+            }
+
+            if (result.output !== testCase.expectedOutput){
+                return res.json({
+                    status: 'WrongAnswer',
+                    failingInput: testCase.input,
+                    expectedOutput: testCase.expectedOutput,
+                    actualOutput: result.output,
+                    executionTime: result.executionTime
+                });
             }
         }
 
-        const submission = new Submission({ problemId, code, status: overallStatus });
+        const submission = new Submission({ problemId, code, status: 'Pass'});
         await submission.save();
 
-        res.json({ status: overallStatus });
+        res.json({ status: 'Pass', executionTime: totalTime });
     }
     catch (error) {
         res.status(500).json({ error: 'Server error' });

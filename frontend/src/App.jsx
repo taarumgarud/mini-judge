@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 function App() {
     const [problem, setProblem] = useState(null);
     const [code, setCode] = useState('');
-    const [status, setStatus] = useState('');
+    const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -20,7 +20,7 @@ function App() {
 
     const handleSubmit = async () => {
         setLoading(true);
-        setStatus('Evaluating...');
+        setResult(null);
         
         const response = await fetch('http://localhost:5000/submit', {
             method: 'POST',
@@ -29,7 +29,7 @@ function App() {
         });
         
         const data = await response.json();
-        setStatus(data.status);
+        setResult(data);
         setLoading(false);
     };
 
@@ -48,26 +48,46 @@ function App() {
                 placeholder="Write your C++ code here..."
             />
             
-            <div style={{ marginTop: '20px', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                <button 
-                    onClick={handleSubmit} 
-                    disabled={loading}
-                    style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none' }}
-                >
-                    {loading ? 'Submitting...' : 'Submit'}
-                </button>
-                
-                {status && (
-                    <strong style={{ 
-                        color: status === 'Pass' ? 'green' : 'red',
-                        padding: '10px',
-                        border: '1px solid #ccc',
-                        backgroundColor: '#f9f9f9'
-                    }}>
-                        Verdict: {status}
-                    </strong>
-                )}
-            </div>
+            <button
+                onClick={handleSubmit}
+                disabled={loading}
+                style={{ padding:'10px 20px', marginTop: '10px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none' }}
+            >
+                {loading ? 'Evaluating...' : 'Submit'}
+            </button>
+
+            {result && (
+                <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#fdfdfd' }}>
+                    <h3 style={{ color: result.status === 'Pass' ? 'green' : 'red', marginTop: 0}}>
+                        Verdict: {result.status} {result.executionTime !== undefined && `(${result.executionTime}ms)`}
+                    </h3>
+
+                    {result.status === 'Compile Error' && (
+                        <div>
+                            <strong>Compiler Output: </strong>
+                            <pre style={{ backgroundColor: '#2d2d2d', color: '#f8c555', padding: '10px', overflowX: 'auto', marginTop: '5px' }}>
+                                {result.errorTrace}
+                            </pre>
+                        </div>
+                    )}
+                    {result.status === 'Wrong Answer' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                            <div>
+                                <strong>Failing Input:</strong>
+                                <pre style={{ margin: '5px 0 0 0', padding: '8px', backgroundColor: '#eee' }}>{result.failingInput}</pre>
+                            </div>
+                            <div>
+                                <strong>Expected Output:</strong>
+                                <pre style={{ margin: '5px 0 0 0', padding: '8px', backgroundColor: '#e6ffe6', color: '#006600'}}>{result.expectedOutput}</pre>
+                            </div>
+                            <div>
+                                <strong>Actual Output:</strong>
+                                <pre style={{ margin: '5px 0 0 0', padding: '8px', backgroundColor: '#ffe6e6', color: '#cc0000' }}>{result.actualOutput}</pre>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
