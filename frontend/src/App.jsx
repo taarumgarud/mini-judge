@@ -23,37 +23,48 @@ function App() {
     }, []);
 
     const pollStatus = async (submissionId) => {
-        const res = await fetch(`http://localhost:5000/status/${submissionId}`);
-        const data = await res.json();
+        try{
+            const res = await fetch(`http://localhost:5000/status/${submissionId}`);
+            if(!res.ok) throw new Error('Server error');
+            const data = await res.json();
 
-        if(data.status === 'Queued' || data.status === 'Executing') {
-            setResult({ status: data.status });
-        }else{
-            clearInterval(pollingInterval.current);
-            setResult({
-                status: data.status,
-                executionTime: data.executionTime,
-                ...data.errorDetails
-            });
-            setLoading(false);
-        }
+            if(data.status === 'Queued' || data.status === 'Executing') {
+                setResult({ status: data.status });
+                pollingInterval.current = setTimeout(() => pollStatus(submissionId), 1000);
+            }else{
+                setResult({
+                    status: data.status,
+                    executionTime: data.executionTime,
+                    ...data.errorDetails
+                });
+                setLoading(false);
+            }
+        } catch (error) {
+            setResult({ status: 'Server Error: Retrying...' });
+            pollingInterval.current = setTimeout(() => pollStatus(submissionId), 2000);
+        }  
     };
 
     const handleSubmit = async () => {
+        if(!code.trim()) return alert("Code cannot be empty.");
         setLoading(true);
         setResult({ status: 'Queued' });
-        
-        const response = await fetch('http://localhost:5000/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ problemId: problem._id, code })
-        });
-        
-        const data = await response.json();
 
-        pollingInterval.current = setInterval(() => {
-            pollStatus(data.submissionId);
-        }, 1000);
+        if(pollingInterval.current) clearTimeout(pollingInterval.current);
+
+        try{
+            const response = await fetch('http://localhost:5000/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ problemId: problem._id, code })
+            });
+            
+            const data = await response.json();
+            pollingInterval.current = setTimeout(() => pollStatus(data.submissionId), 1000);
+        } catch (error) {
+            setResult({ status: 'Failed to submit.' });
+            setLoading(false);
+        }
     };
 
     if (!problem) return <div>Loading problem...</div>;

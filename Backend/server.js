@@ -14,7 +14,10 @@ const MONGO_URI = process.env.MONGO_URI;
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error(err));
+    .catch(err => {
+        console.error('CRITICAL: Failed to connect to MongoDB', err);
+        process.exit(1);
+    });
 
 const queue = [];
 let currentRunning = 0;
@@ -72,6 +75,11 @@ const processQueue = async () => {
 
     } catch (error) {
         console.error('Worker error:',error);
+        try {
+            await Submission.findByIdAndUpdate(submissionId, { status: 'Internal Server Error' });
+        } catch (dbErr) {
+            console.error('Failed to update stuck submission', dbErr);
+        }
     } finally {
         currentRunning--;
         processQueue();
@@ -84,8 +92,13 @@ app.get('/problems', async (req, res) => {
 });
 
 app.get('/problems/:id', async (req, res) => {
-    const problem = await Problem.findById(req.params.id);
-    res.json(problem);
+    try{
+        const problem = await Problem.findById(req.params.id).select('-testCases');
+        if(!problem) return res.status(404).json({ error: 'Problem not found' });
+        res.json(problem);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error fetchig problem details' });
+    }   
 });
 
 app.post('/submit', async (req, res) => {
