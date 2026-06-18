@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 function App() {
     const [problem, setProblem] = useState(null);
     const [code, setCode] = useState('');
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    const pollingInterval = useRef(null);
 
     useEffect(() => {
         fetch('http://localhost:5000/problems')
@@ -16,11 +18,30 @@ function App() {
                         .then(fullProblem => setProblem(fullProblem));
                 }
             });
+
+        return () => clearInterval(pollingInterval.current); 
     }, []);
+
+    const pollStatus = async (submissionId) => {
+        const res = await fetch(`http://localhost:5000/status/${submissionId}`);
+        const data = await res.json();
+
+        if(data.status === 'Queued' || data.status === 'Executing') {
+            setResult({ status: data.status });
+        }else{
+            clearInterval(pollingInterval.current);
+            setResult({
+                status: data.status,
+                executionTime: data.executionTime,
+                ...data.errorDetails
+            });
+            setLoading(false);
+        }
+    };
 
     const handleSubmit = async () => {
         setLoading(true);
-        setResult(null);
+        setResult({ status: 'Queued' });
         
         const response = await fetch('http://localhost:5000/submit', {
             method: 'POST',
@@ -29,8 +50,10 @@ function App() {
         });
         
         const data = await response.json();
-        setResult(data);
-        setLoading(false);
+
+        pollingInterval.current = setInterval(() => {
+            pollStatus(data.submissionId);
+        }, 1000);
     };
 
     if (!problem) return <div>Loading problem...</div>;
@@ -51,15 +74,17 @@ function App() {
             <button
                 onClick={handleSubmit}
                 disabled={loading}
-                style={{ padding:'10px 20px', marginTop: '10px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none' }}
+                style={{ padding:'10px 20px', marginTop: '10px', cursor: 'pointer', backgroundColor: loading ? '#ccc' : '#007bff', color: 'white', border: 'none' }}
             >
-                {loading ? 'Evaluating...' : 'Submit'}
+                Submit
             </button>
 
             {result && (
                 <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#fdfdfd' }}>
-                    <h3 style={{ color: result.status === 'Pass' ? 'green' : 'red', marginTop: 0}}>
-                        Verdict: {result.status} {result.executionTime !== undefined && `(${result.executionTime}ms)`}
+                    <h3 style={{ color: ['Pass', 'Queued', 'Executing'].includes(result.status) ? (result.status === 'Pass' ? 'green' : '#ff9800') : 'red', marginTop: 0}}>
+                        Verdict: {result.status}
+                        {result.status === 'Executing' && '...'} 
+                        {result.executionTime !== undefined && ` (${result.executionTime}ms)`}
                     </h3>
 
                     {result.status === 'Compile Error' && (

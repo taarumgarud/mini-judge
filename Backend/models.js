@@ -15,7 +15,9 @@ const submissionSchema = new mongoose.Schema({
     problemId: mongoose.Schema.Types.ObjectId,
     code: String,
     language: { type: String, default: 'cpp'},
-    status: String
+    status: String,
+    executionTime: Number,
+    errorDetails: mongoose.Schema.Types.Mixed
 });
 
 const Problem = mongoose.model('Problem', problemSchema);
