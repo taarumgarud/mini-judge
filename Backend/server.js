@@ -101,6 +101,20 @@ app.get('/problems/:id', async (req, res) => {
     }   
 });
 
+app.get('/problems/:id/submissions', async (req, res) => {
+    try {
+        // Fetch the 10 most recent submissions for this problem
+        const submissions = await Submission.find({ problemId: req.params.id })
+            .sort({ _id: -1 })
+            .limit(10)
+            .select('-code -errorDetails'); // Keep payload light
+            
+        res.json(submissions);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error fetching submissions' });
+    }
+});
+
 app.post('/submit', async (req, res) => {
     const { problemId, code } = req.body;
 
