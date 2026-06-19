@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Editor from '@monaco-editor/react';
+import Split from 'react-split';
+import './App.css';
 
 function App() {
     const [problem, setProblem] = useState(null);
-    const [code, setCode] = useState('');
+    const [code, setCode] = useState('// Write your C++ code here\n#include <iostream>\nusing namespace std;\n\nint main() {\n  \n  return 0;\n}');
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -19,7 +22,7 @@ function App() {
                 }
             });
 
-        return () => clearInterval(pollingInterval.current); 
+        return () => clearTimeout(pollingInterval.current); 
     }, []);
 
     const pollStatus = async (submissionId) => {
@@ -46,7 +49,6 @@ function App() {
     };
 
     const handleSubmit = async () => {
-        if(!code.trim()) return alert("Code cannot be empty.");
         setLoading(true);
         setResult({ status: 'Queued' });
 
@@ -62,69 +64,73 @@ function App() {
             const data = await response.json();
             pollingInterval.current = setTimeout(() => pollStatus(data.submissionId), 1000);
         } catch (error) {
-            setResult({ status: 'Failed to submit.' });
+            setResult({ status: 'Submission Failed' });
             setLoading(false);
         }
     };
 
-    if (!problem) return <div>Loading problem...</div>;
+    if (!problem) return <div className="loading-screen">Loading Platform...</div>;
 
     return (
-        <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
-            <h1>{problem.title}</h1>
-            <p>{problem.description}</p>
-            
-            <textarea 
-                rows="15" 
-                style={{ width: '100%', fontFamily: 'monospace', padding: '10px', marginTop: '10px' }}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Write your C++ code here..."
-            />
-            
-            <button
-                onClick={handleSubmit}
-                disabled={loading}
-                style={{ padding:'10px 20px', marginTop: '10px', cursor: 'pointer', backgroundColor: loading ? '#ccc' : '#007bff', color: 'white', border: 'none' }}
-            >
-                Submit
-            </button>
-
-            {result && (
-                <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#fdfdfd' }}>
-                    <h3 style={{ color: ['Pass', 'Queued', 'Executing'].includes(result.status) ? (result.status === 'Pass' ? 'green' : '#ff9800') : 'red', marginTop: 0}}>
-                        Verdict: {result.status}
-                        {result.status === 'Executing' && '...'} 
-                        {result.executionTime !== undefined && ` (${result.executionTime}ms)`}
-                    </h3>
-
-                    {result.status === 'Compile Error' && (
-                        <div>
-                            <strong>Compiler Output: </strong>
-                            <pre style={{ backgroundColor: '#2d2d2d', color: '#f8c555', padding: '10px', overflowX: 'auto', marginTop: '5px' }}>
-                                {result.errorTrace}
-                            </pre>
-                        </div>
-                    )}
-                    {result.status === 'Wrong Answer' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                            <div>
-                                <strong>Failing Input:</strong>
-                                <pre style={{ margin: '5px 0 0 0', padding: '8px', backgroundColor: '#eee' }}>{result.failingInput}</pre>
-                            </div>
-                            <div>
-                                <strong>Expected Output:</strong>
-                                <pre style={{ margin: '5px 0 0 0', padding: '8px', backgroundColor: '#e6ffe6', color: '#006600'}}>{result.expectedOutput}</pre>
-                            </div>
-                            <div>
-                                <strong>Actual Output:</strong>
-                                <pre style={{ margin: '5px 0 0 0', padding: '8px', backgroundColor: '#ffe6e6', color: '#cc0000' }}>{result.actualOutput}</pre>
-                            </div>
-                        </div>
-                    )}
+        <Split sizes={[40,60]} minSize={300} expandToMin={false} gutterSize={10} className="split-wrapper">
+            {/* Left Pane: Problem Description */}
+            <div className="pane problem-pane">
+                <h1>{problem.title}</h1>
+                <div className="tags">
+                    <span className="tag diff-easy">Easy</span>
+                    <span className="tag">Arrays</span>
                 </div>
-            )}
-        </div>
+                <p className="description">{problem.description}</p>
+            </div>
+
+            {/* Right Pane: Editor && Output */}
+            <div className="pane editor-pane">
+                <div className="editor-header">
+                    <span className="lang-badge">C++</span>
+                    <button onClick={handleSubmit} disabled={loading} className={`sumbit-btn ${loading ? 'loading' : ''}`}>
+                        {loading ? 'Executing...' : 'Submit Code'}
+                    </button>
+                </div>
+
+                <div className="monaco-wrapper">
+                    <Editor
+                        heights="100%"
+                        defaultLanguage="cpp"
+                        theme="vs-dark"
+                        value={code}
+                        onChange={(value) => setCode(value)}
+                        options={{ minimap: { enabled: false}, fontSize: 14 }}
+                    />
+                </div>
+
+                {/* Terminal Output Window */}
+                <div className="terminal-window">
+                    <div className="terminal-header">Execution Output</div>
+                    <div className="terminal-content">
+                        {!result && <span className="text-muted">Run code to see results...</span>}
+                        {result && (
+                            <div>
+                                <h3 className={`status ${result.status === 'Pass' ? 'text-green' : 'text-red'}`}>
+                                    {result.status} {result.executionTime !== undefined && `(${result.executionTime}ms)`}
+                                </h3>
+
+                                {result.status === 'Compile Error' && (
+                                    <pre className="error-trace">{result.errorTrace}</pre>
+                                )}
+
+                                {result.status === 'Wrong Answer' && (
+                                    <div className="diff-box">
+                                        <div><strong>Input:</strong> <pre>{result.failingInput}</pre></div>
+                                        <div><strong>Expected:</strong> <pre className='text-green'>{result.expectedOutput}</pre></div>
+                                        <div><strong>Actual:</strong> <pre className="text-red">{result.actualOutput}</pre></div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </Split>
     );
 }
 
