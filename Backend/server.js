@@ -131,4 +131,13 @@ app.get('/status/:id', async (req, res) => {
     }
 });
 
+const fs = require('fs');
+const path = require('path');
+const tempDir = path.join(__dirname, 'temp');
+
+if(fs.existsSync(tempDir) && path.basename(tempDir) === 'temp') {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    console.log('Cleaned up orphaned execution files.');
+}
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
