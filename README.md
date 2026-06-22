@@ -81,10 +81,12 @@ During peak traffic conditions where 50 users simultaneously hit the compilation
    cd ../frontend && npm install
 
 2. **Initialize and Seed the Database:**
+   ```bash
    cd ../backend
    node seed.js
 
-3. **Launch the Infrastructure:**
+4. **Launch the Infrastructure:**
+   ```bash
    # Start the Backend Control Pane
    node server.js
 
