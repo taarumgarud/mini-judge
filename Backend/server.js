@@ -17,6 +17,7 @@ const submitLimiter = rateLimit({
     message: { error: 'Too many submissions. Please wait 60 seconds.' },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req, res) => process.env.NODE_ENV === 'loadtest'
 });
 
 app.use(cors());
