@@ -14,12 +14,12 @@ const executeCpp = async (code, input) => {
         await fs.writeFile(codeFilePath, code);
         await fs.writeFile(inputFilePath, input);
 
-        const command = `docker run --rm --memory="256m" --cpus="0.5" --pids-limit=64 --network none -v "${tempDir}":/app -w /app gcc sh -c "g++ main.cpp -o main && ./main < input.txt"`;
+        const command = `docker run --rm --memory="256m" --cpus="0.5" --pids-limit=64 --network none -v "${tempDir}":/app -w /app gcc sh -c "timeout 10 g++ main.cpp -o main && ./main < input.txt"`;
 
         const startTime = performance.now();
 
         return await new Promise((resolve) => {
-            exec(command, { timeout: 5000, maxBuffer: 1024 * 64 }, (error, stdout, stderr) => {
+            exec(command, { timeout: 16000, maxBuffer: 1024 * 64 }, (error, stdout, stderr) => {
                 if(error && error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'){
                     return resolve({ status: 'Output Limit Exceeded', executionTime: 0 });
                 }
@@ -28,6 +28,9 @@ const executeCpp = async (code, input) => {
                 const executionTime = Math.round(endTime - startTime);
 
                 if(error){
+                    if(error.code === 124){
+                        return resolve({ status: 'Time Limit Exceeded', executionTime });
+                    }
                     if(error.killed){
                         return resolve({ status: 'Time Limit Exceeded', executionTime });
                     }

@@ -2,11 +2,23 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+
 const { Problem, Submission } = require('./models');
 const { executeCpp } = require('./executor');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json());
+
+const submitLimiter = rateLimit({
+    windowMs: 60 * 1000, 
+    max: 15,
+    message: { error: 'Too many submissions. Please wait 60 seconds.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 app.use(cors());
 
 const PORT = process.env.PORT || 5000;
@@ -115,7 +127,7 @@ app.get('/problems/:id/submissions', async (req, res) => {
     }
 });
 
-app.post('/submit', async (req, res) => {
+app.post('/submit', submitLimiter, async (req, res) => {
     const { problemId, code } = req.body;
 
     try{
