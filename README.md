@@ -51,9 +51,9 @@ To prove the operational stability of the bounded worker queue and verify resour
 | Performance Metric | Captured Value | Operational Significance |
 | :--- | :--- | :--- |
 | **HTTP Request Failure Rate** | **0.00%** | Absolute platform reliability under intense spikes. Zero connections dropped. |
-| **API Ingress Latency (p95)** | **107.85ms** | Proves the Node.js event loop remained fully unblocked and responsive during full load. |
-| **Average Ingress Latency (med)**| **12.51ms** | Demonstrates highly efficient, low-overhead transaction ingestion. |
-| **Average Verdict Resolution Time** | **24.05s** | Represents expected, controlled degradation via structural queuing. |
+| **API Ingress Latency (p95)** | **41.48ms** | Proves the Node.js event loop remained fully unblocked and responsive during full load. |
+| **Average Ingress Latency (med)**| **4.61ms** | Demonstrates highly efficient, low-overhead transaction ingestion. |
+| **Average Verdict Resolution Time** | **15.61s** | Represents expected, controlled degradation via structural queuing. |
 
 ### Architectural Takeaway
 During peak traffic conditions where 50 users simultaneously hit the compilation system, a naive application architecture would suffer catastrophic failure due to host process starvation. By restricting the active container concurrency and using an internal backlog queue, this platform successfully absorbed the spike, degraded gracefully by stretching resolution wait times, maintained sub-110ms API interactive response curves, and recovered completely with zero data corruption or unhandled runtime faults.
